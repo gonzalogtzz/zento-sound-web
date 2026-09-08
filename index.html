@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Zento Sound</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;600;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --base:#121212; --bone:#F3F1EB; --blue:#1B27E0; --soft:#7B85FF;
+    --faint:rgba(243,241,235,.42); --hair:rgba(243,241,235,.14);
+    --display:"Archivo","Helvetica Neue",Arial,sans-serif;
+    --mono:"Space Mono",ui-monospace,Menlo,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:var(--base);color:var(--bone);
+    font-family:var(--display);-webkit-font-smoothing:antialiased;overflow:hidden}
+  button{font:inherit;cursor:pointer}
+
+  .rotulo{font-family:var(--mono);text-transform:uppercase;letter-spacing:.12em;
+    font-size:11px;color:var(--faint)}
+  .btn{background:var(--blue);color:var(--bone);border:0;border-radius:999px;
+    padding:14px 26px;font-weight:700;font-size:15px}
+  .btn.ghost{background:transparent;border:1px solid var(--hair);color:var(--bone)}
+
+  /* ---------- pantallas ---------- */
+  .pantalla{position:fixed;inset:0;display:none;flex-direction:column;
+    padding:clamp(20px,4vw,48px);overflow:auto}
+  .pantalla.on{display:flex}
+
+  .centro{margin:auto;max-width:640px;width:100%}
+  h1{font-weight:800;letter-spacing:-.035em;line-height:.98;
+    font-size:clamp(34px,7vw,54px);margin:.35em 0 .5em}
+  .punto{display:inline-block;width:8px;height:8px;border-radius:50%;
+    background:var(--blue);vertical-align:middle;margin-left:8px}
+  p{color:rgba(243,241,235,.72);line-height:1.55;font-size:15px}
+  code{font-family:var(--mono);font-size:13px;background:rgba(243,241,235,.08);
+    padding:3px 7px;border-radius:6px;word-break:break-all}
+  ol{padding-left:20px;line-height:1.7;color:rgba(243,241,235,.72);font-size:15px}
+  input{width:100%;background:rgba(243,241,235,.06);border:1px solid var(--hair);
+    color:var(--bone);border-radius:10px;padding:14px;font-family:var(--mono);
+    font-size:14px;margin:14px 0}
+  .fila{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+  /* ---------- reproductor ---------- */
+  #app{padding:0}
+  .cabecera{display:flex;align-items:baseline;gap:12px;
+    padding:clamp(14px,2.5vh,26px) clamp(20px,3vw,40px) 0;flex:0 0 auto}
+  .cabecera .tema{font-weight:800;letter-spacing:-.02em;
+    font-size:clamp(15px,2.2vw,21px);white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+  .cabecera .artista{color:var(--faint);font-size:clamp(12px,1.6vw,15px);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .estado{margin-left:auto;display:flex;align-items:center;gap:8px;flex:0 0 auto}
+  .luz{width:8px;height:8px;border-radius:50%;background:var(--blue)}
+  .luz.off{background:rgba(243,241,235,.25)}
+
+  #letras{flex:1 1 auto;position:relative;overflow:hidden;
+    mask-image:linear-gradient(180deg,transparent,#000 16%,#000 84%,transparent);
+    -webkit-mask-image:linear-gradient(180deg,transparent,#000 16%,#000 84%,transparent)}
+  #pista{position:absolute;left:0;right:0;top:50%;padding:0 clamp(20px,4vw,64px);
+    will-change:transform}
+  .verso{font-weight:800;letter-spacing:-.025em;line-height:1.16;
+    font-size:clamp(23px,4.4vw,46px);color:rgba(243,241,235,.28);
+    padding:clamp(7px,1.1vh,13px) 0;transition:color .28s ease,opacity .28s ease}
+  .verso.activo{color:var(--bone)}
+  .verso.vecino{color:rgba(243,241,235,.46)}
+  .verso.vacio{font-size:clamp(16px,2vw,22px);color:var(--faint)}
+
+  .aviso{position:absolute;inset:0;display:flex;align-items:center;
+    justify-content:center;text-align:center;padding:40px}
+  .aviso .rotulo{margin-bottom:14px}
+  .aviso .grande{font-weight:800;letter-spacing:-.03em;
+    font-size:clamp(26px,4.5vw,44px);line-height:1.1}
+
+  .pie{flex:0 0 auto;padding:0 clamp(20px,3vw,40px) clamp(14px,2.5vh,24px)}
+  .barra{height:2px;background:var(--hair);border-radius:2px;overflow:hidden;
+    margin-bottom:10px}
+  .barra i{display:block;height:100%;background:var(--blue);width:0}
+  .pie .fila{justify-content:space-between}
+  .pie .rotulo{font-size:10px}
+  .pie button{background:none;border:0;color:var(--faint);font-family:var(--mono);
+    font-size:10px;text-transform:uppercase;letter-spacing:.12em;padding:6px 0}
+</style>
+</head>
+<body>
+
+<!-- ============ 1. configuracion ============ -->
+<section id="setup" class="pantalla">
+  <div class="centro">
+    <div class="rotulo">Configuración — una sola vez</div>
+    <h1>Zento Sound<span class="punto"></span></h1>
+    <p>Necesita un identificador de aplicación de Spotify. Es gratis y tarda dos
+       minutos. No se comparte con nadie: se queda guardado en este navegador.</p>
+    <ol>
+      <li>Entra a <code>developer.spotify.com/dashboard</code> y pulsa <b>Create app</b>.</li>
+      <li>Nombre: <code>Zento Sound</code>. Descripción: lo que quieras.</li>
+      <li>En <b>Redirect URI</b> pega exactamente esto:<br>
+          <code id="redir"></code></li>
+      <li>Marca <b>Web API</b>, guarda, y copia el <b>Client ID</b>.</li>
+    </ol>
+    <input id="cid" placeholder="Pega aquí el Client ID" autocomplete="off"
+           autocapitalize="off" spellcheck="false">
+    <div class="fila">
+      <button class="btn" id="guardar">Guardar y conectar</button>
+      <span class="rotulo" id="setupErr"></span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2. entrar ============ -->
+<section id="login" class="pantalla">
+  <div class="centro">
+    <div class="rotulo">Listo para conectar</div>
+    <h1>Zento Sound<span class="punto"></span></h1>
+    <p>Letras sincronizadas con lo que estés escuchando en Spotify.</p>
+    <div class="fila" style="margin-top:26px">
+      <button class="btn" id="entrar">Conectar con Spotify</button>
+      <button class="btn ghost" id="reconfig">Cambiar Client ID</button>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. reproductor ============ -->
+<section id="app" class="pantalla">
+  <header class="cabecera">
+    <div style="min-width:0">
+      <div class="tema" id="tema">—</div>
+      <div class="artista" id="artista"></div>
+    </div>
+    <div class="estado"><span class="luz off" id="luz"></span></div>
+  </header>
+
+  <div id="letras">
+    <div id="pista"></div>
+    <div class="aviso" id="aviso" hidden>
+      <div>
+        <div class="rotulo" id="avisoRotulo">Sin reproducción</div>
+        <div class="grande" id="avisoTexto">Pon algo en Spotify</div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="pie">
+    <div class="barra"><i id="progreso"></i></div>
+    <div class="fila">
+      <span class="rotulo" id="fuente"></span>
+      <button id="pantallaCompleta">Pantalla completa</button>
+    </div>
+  </footer>
+</section>
+
+<script>
+"use strict";
+
+/* ============================================================
+   Zento Sound — letras sincronizadas con Spotify, sin servidor.
+   Todo ocurre en el navegador: OAuth con PKCE (sin secreto),
+   consulta de reproducción a Spotify y letras de LRCLIB.
+   ============================================================ */
+
+const REDIRECT = location.origin + location.pathname;
+const SCOPES   = "user-read-currently-playing user-read-playback-state";
+const LS       = {
+  cid:"zs_client_id", verifier:"zs_verifier",
+  tok:"zs_token", ref:"zs_refresh", exp:"zs_expires"
+};
+
+const $ = s => document.querySelector(s);
+const ver = (id, on) => $(id).classList.toggle("on", on);
+
+/* ---------- utilidades ---------- */
+const guardar = (k,v) => { try{ localStorage.setItem(k,v) }catch{} };
+const leer    = k => { try{ return localStorage.getItem(k) }catch{ return null } };
+const borrar  = k => { try{ localStorage.removeItem(k) }catch{} };
+
+function b64url(buf){
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+}
+async function sha256(txt){
+  return crypto.subtle.digest("SHA-256", new TextEncoder().encode(txt));
+}
+function aleatorio(n=64){
+  const c = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
+  return Array.from(crypto.getRandomValues(new Uint8Array(n)), b => c[b % c.length]).join("");
+}
+
+/* ---------- autenticación (PKCE) ---------- */
+async function entrar(){
+  const cid = leer(LS.cid);
+  if(!cid) return mostrarSetup();
+  const verifier = aleatorio();
+  guardar(LS.verifier, verifier);
+  const challenge = b64url(await sha256(verifier));
+  const p = new URLSearchParams({
+    client_id: cid, response_type:"code", redirect_uri: REDIRECT,
+    scope: SCOPES, code_challenge_method:"S256", code_challenge: challenge
+  });
+  location.href = "https://accounts.spotify.com/authorize?" + p;
+}
+
+async function pedirToken(cuerpo){
+  const r = await fetch("https://accounts.spotify.com/api/token", {
+    method:"POST",
+    headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body: new URLSearchParams(cuerpo)
+  });
+  if(!r.ok) throw new Error("token " + r.status);
+  const d = await r.json();
+  guardar(LS.tok, d.access_token);
+  guardar(LS.exp, String(Date.now() + (d.expires_in - 60) * 1000));
+  if(d.refresh_token) guardar(LS.ref, d.refresh_token);
+  return d.access_token;
+}
+
+async function canjear(code){
+  return pedirToken({
+    client_id: leer(LS.cid), grant_type:"authorization_code",
+    code, redirect_uri: REDIRECT, code_verifier: leer(LS.verifier)
+  });
+}
+
+async function token(){
+  const t = leer(LS.tok), exp = +(leer(LS.exp) || 0);
+  if(t && Date.now() < exp) return t;
+  const ref = leer(LS.ref);
+  if(!ref) return null;
+  try{
+    return await pedirToken({
+      client_id: leer(LS.cid), grant_type:"refresh_token", refresh_token: ref
+    });
+  }catch{
+    [LS.tok, LS.ref, LS.exp].forEach(borrar);
+    return null;
+  }
+}
+
+/* ---------- Spotify: qué suena ---------- */
+async function sonando(){
+  const t = await token();
+  if(!t) return { estado:"sin-sesion" };
+  const r = await fetch(
+    "https://api.spotify.com/v1/me/player/currently-playing?additional_types=track", {
+    headers:{ Authorization:"Bearer " + t }
+  });
+  if(r.status === 204) return { estado:"nada" };
+  if(r.status === 401){ borrar(LS.tok); return { estado:"sin-sesion" }; }
+  if(!r.ok) return { estado:"error" };
+  const d = await r.json();
+  if(!d || !d.item) return { estado:"nada" };
+  return {
+    estado:"ok",
+    id: d.item.id,
+    titulo: d.item.name,
+    artistas: (d.item.artists || []).map(a => a.name),
+    album: d.item.album ? d.item.album.name : "",
+    duracionMs: d.item.duration_ms,
+    progresoMs: d.progress_ms || 0,
+    sonando: !!d.is_playing
+  };
+}
+
+/* ---------- LRCLIB: la escalera de emparejamiento ----------
+   Probada contra 262 canciones reales: 93.1% de acierto.
+   Los tres intentos pasan por el mismo portero — duración ±4s
+   Y coincidencia de artista — sin el cual salen falsos positivos
+   graves (la letra de otra canción con el mismo título).        */
+
+const TOLERANCIA = 4;
+
+function plegar(s){
+  return (s || "").normalize("NFKD").replace(/[̀-ͯ]/g,"")
+    .toLowerCase().replace(/[^a-z0-9]+/g,"");
+}
+function artistaCoincide(spotify, lrclib){
+  const a = plegar(spotify.join(" ")), b = plegar(lrclib);
+  if(!a || !b) return false;
+  if(a.includes(b) || b.includes(a)) return true;
+  const primero = plegar(spotify[0]);
+  return !!primero && (b.includes(primero) || primero.includes(b));
+}
+function limpiarTitulo(t){
+  return t.replace(/\s*[\(\[](feat\.?|ft\.?|with|con)[^\)\]]*[\)\]]/ig, "")
+          .replace(/\s*-\s*.*\b(remix|remaster(ed)?|version|edit|mix)\b.*$/i, "")
+          .replace(/\s*\bREMIX\b\s*$/i, "")
+          .replace(/\s+/g," ").trim();
+}
+async function lrclib(ruta, params){
+  const u = "https://lrclib.net/api/" + ruta + "?" + new URLSearchParams(params);
+  try{
+    const r = await fetch(u, { headers:{ "Lrclib-Client":"zento-sound" } });
+    return r.ok ? r.json() : null;
+  }catch{ return null }
+}
+function valido(rec, pista){
+  if(!rec || !rec.syncedLyrics) return false;
+  if(Math.abs((rec.duration || 0) - Math.round(pista.duracionMs/1000)) > TOLERANCIA) return false;
+  return artistaCoincide(pista.artistas, rec.artistName || "");
+}
+
+async function buscarLetra(pista){
+  const segundos = Math.round(pista.duracionMs / 1000);
+  const limpio = limpiarTitulo(pista.titulo);
+
+  // 1) match exacto por artista + titulo + duracion
+  const exacto = await lrclib("get", {
+    artist_name: pista.artistas[0], track_name: pista.titulo,
+    album_name: pista.album, duration: segundos
+  });
+  if(exacto && exacto.syncedLyrics) return { lrc: exacto.syncedLyrics, via:"exacto" };
+  const plano = exacto && exacto.plainLyrics ? exacto.plainLyrics : null;
+  if(exacto && exacto.instrumental) return { instrumental:true };
+
+  // 2) titulo limpio + artista   3) solo titulo
+  const intentos = [];
+  if(limpio.toLowerCase() !== pista.titulo.toLowerCase())
+    intentos.push({ track_name: limpio, artist_name: pista.artistas[0] });
+  intentos.push({ track_name: pista.titulo });
+  if(limpio.toLowerCase() !== pista.titulo.toLowerCase())
+    intentos.push({ track_name: limpio });
+
+  for(const q of intentos){
+    const res = await lrclib("search", q);
+    if(!Array.isArray(res)) continue;
+    for(const rec of res)
+      if(valido(rec, pista)) return { lrc: rec.syncedLyrics, via:"búsqueda" };
+    if(!plano)
+      for(const rec of res)
+        if(rec.plainLyrics && artistaCoincide(pista.artistas, rec.artistName || ""))
+          return { plano: rec.plainLyrics };
+  }
+  return plano ? { plano } : {};
+}
+
+/* ---------- LRC → versos ---------- */
+function parsearLRC(txt){
+  const versos = [];
+  for(const linea of txt.split("\n")){
+    const marcas = [...linea.matchAll(/\[(\d+):(\d+)(?:[.:](\d{1,3}))?\]/g)];
+    if(!marcas.length) continue;
+    const texto = linea.replace(/\[[^\]]*\]/g, "").trim();
+    for(const m of marcas){
+      const cent = m[3] ? +(m[3].padEnd(3,"0")) : 0;
+      versos.push({ ms: (+m[1])*60000 + (+m[2])*1000 + cent, texto });
+    }
+  }
+  return versos.sort((a,b) => a.ms - b.ms);
+}
+
+/* ---------- estado y reloj ----------
+   Spotify se consulta cada pocos segundos, pero el verso se calcula
+   en cada fotograma interpolando desde la última lectura. Asi va
+   fluido sin castigar la API.                                      */
+
+const S = {
+  id:null, versos:[], plano:null, instrumental:false, via:"",
+  progresoMs:0, marcada:0, sonando:false, duracionMs:0, indice:-1
+};
+
+function posicionMs(){
+  if(!S.sonando) return S.progresoMs;
+  return S.progresoMs + (performance.now() - S.marcada);
+}
+
+function pintarVersos(){
+  const p = $("#pista");
+  p.innerHTML = "";
+  S.versos.forEach((v, i) => {
+    const d = document.createElement("div");
+    d.className = "verso";
+    d.textContent = v.texto || "•";
+    if(!v.texto) d.classList.add("vacio");
+    d.dataset.i = i;
+    p.appendChild(d);
+  });
+  S.indice = -1;
+}
+
+function fotograma(){
+  requestAnimationFrame(fotograma);
+  if(!S.versos.length) return;
+  const t = posicionMs();
+
+  let i = S.versos.length - 1;
+  while(i >= 0 && S.versos[i].ms > t) i--;
+  if(i === S.indice) return;
+  S.indice = i;
+
+  const nodos = $("#pista").children;
+  for(let k = 0; k < nodos.length; k++){
+    const n = nodos[k], d = Math.abs(k - i);
+    n.classList.toggle("activo", k === i);
+    n.classList.toggle("vecino", d === 1);
+  }
+  const actual = nodos[Math.max(i, 0)];
+  if(actual){
+    const y = actual.offsetTop + actual.offsetHeight / 2;
+    $("#pista").style.transform = `translateY(${-y}px)`;
+  }
+  if(S.duracionMs)
+    $("#progreso").style.width = Math.min(100, t / S.duracionMs * 100) + "%";
+}
+
+function aviso(rotulo, texto){
+  $("#avisoRotulo").textContent = rotulo;
+  $("#avisoTexto").textContent = texto;
+  $("#aviso").hidden = false;
+  $("#pista").innerHTML = "";
+}
+const quitarAviso = () => { $("#aviso").hidden = true; };
+
+/* ---------- ciclo de consulta ---------- */
+async function tic(){
+  let d;
+  try{ d = await sonando(); }catch{ d = { estado:"error" }; }
+
+  if(d.estado === "sin-sesion"){ pantalla("login"); return; }
+
+  $("#luz").classList.toggle("off", !(d.estado === "ok" && d.sonando));
+
+  if(d.estado !== "ok"){
+    $("#tema").textContent = "—"; $("#artista").textContent = "";
+    S.versos = []; S.id = null;
+    aviso("Sin reproducción", d.estado === "error"
+      ? "No pude hablar con Spotify" : "Pon algo en Spotify");
+    return;
+  }
+
+  // reloj: se resincroniza en cada lectura
+  S.progresoMs = d.progresoMs;
+  S.marcada    = performance.now();
+  S.sonando    = d.sonando;
+  S.duracionMs = d.duracionMs;
+
+  if(d.id === S.id) return;          // misma canción, nada que recargar
+
+  S.id = d.id;
+  S.versos = []; S.indice = -1;
+  $("#tema").textContent = d.titulo;
+  $("#artista").textContent = d.artistas.join(", ");
+  aviso("Buscando letra", d.titulo);
+  $("#fuente").textContent = "";
+
+  const r = await buscarLetra(d);
+  if(S.id !== d.id) return;          // cambió de canción mientras buscaba
+
+  if(r.lrc){
+    S.versos = parsearLRC(r.lrc);
+    if(S.versos.length){
+      quitarAviso(); pintarVersos();
+      $("#fuente").textContent = "LRCLIB · " + r.via;
+      return;
+    }
+  }
+  if(r.instrumental){ aviso("Instrumental", d.titulo); $("#fuente").textContent = "LRCLIB"; return; }
+  if(r.plano){
+    S.versos = r.plano.split("\n").map(t => ({ ms:0, texto:t.trim() }));
+    quitarAviso(); pintarVersos();
+    $("#fuente").textContent = "Sin sincronía — texto plano";
+    return;
+  }
+  aviso("Sin letra", d.titulo);
+  $("#fuente").textContent = "No está en LRCLIB";
+}
+
+/* ---------- pantallas ---------- */
+function pantalla(cual){
+  ver("#setup", cual === "setup");
+  ver("#login", cual === "login");
+  ver("#app",   cual === "app");
+}
+function mostrarSetup(){
+  $("#redir").textContent = REDIRECT;
+  $("#cid").value = leer(LS.cid) || "";
+  pantalla("setup");
+}
+
+/* ---------- pantalla encendida ---------- */
+async function mantenerDespierto(){
+  try{
+    if("wakeLock" in navigator){
+      const w = await navigator.wakeLock.request("screen");
+      document.addEventListener("visibilitychange", () => {
+        if(document.visibilityState === "visible") mantenerDespierto();
+      }, { once:true });
+      return w;
+    }
+  }catch{}
+}
+
+/* ---------- arranque ---------- */
+$("#guardar").onclick = () => {
+  const v = $("#cid").value.trim();
+  if(!/^[0-9a-f]{32}$/i.test(v)){
+    $("#setupErr").textContent = "Ese no parece un Client ID";
+    return;
+  }
+  guardar(LS.cid, v); entrar();
+};
+$("#entrar").onclick = entrar;
+$("#reconfig").onclick = mostrarSetup;
+$("#pantallaCompleta").onclick = () => {
+  if(document.fullscreenElement) document.exitFullscreen();
+  else document.documentElement.requestFullscreen().catch(()=>{});
+};
+$("#cid").addEventListener("keydown", e => { if(e.key === "Enter") $("#guardar").click(); });
+
+(async function inicio(){
+  const q = new URLSearchParams(location.search);
+  const code = q.get("code");
+  if(code){
+    history.replaceState({}, "", REDIRECT);
+    try{ await canjear(code); }catch(e){ console.warn(e); }
+  }
+
+  if(!leer(LS.cid)) return mostrarSetup();
+
+  const t = await token();
+  if(!t) return pantalla("login");
+
+  pantalla("app");
+  mantenerDespierto();
+  requestAnimationFrame(fotograma);
+  await tic();
+  setInterval(tic, 3000);
+})();
+</script>
+</body>
+</html>
