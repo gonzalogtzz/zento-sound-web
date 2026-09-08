@@ -47,7 +47,7 @@
 
   /* ---------- reproductor ---------- */
   #app{padding:0}
-  .cabecera{display:flex;align-items:baseline;gap:12px;
+  .cabecera{display:flex;align-items:center;gap:clamp(10px,1.4vw,16px);
     padding:clamp(14px,2.5vh,26px) clamp(20px,3vw,40px) 0;flex:0 0 auto}
   .cabecera .tema{font-weight:800;letter-spacing:-.02em;
     font-size:clamp(15px,2.2vw,21px);white-space:nowrap;overflow:hidden;
@@ -55,6 +55,9 @@
   .cabecera .artista{color:var(--faint);font-size:clamp(12px,1.6vw,15px);
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .estado{margin-left:auto;display:flex;align-items:center;gap:8px;flex:0 0 auto}
+  .portada{width:clamp(40px,4.6vw,64px);aspect-ratio:1;border-radius:8px;
+    object-fit:cover;flex:0 0 auto;background:rgba(243,241,235,.06);
+    box-shadow:0 2px 14px rgba(0,0,0,.45)}
   .luz{width:8px;height:8px;border-radius:50%;background:var(--blue)}
   .luz.off{background:rgba(243,241,235,.25)}
 
@@ -130,6 +133,7 @@
 <!-- ============ 3. reproductor ============ -->
 <section id="app" class="pantalla">
   <header class="cabecera">
+    <img class="portada" id="portada" alt="" hidden>
     <div style="min-width:0">
       <div class="tema" id="tema">—</div>
       <div class="artista" id="artista"></div>
@@ -244,6 +248,15 @@ async function token(){
 }
 
 /* ---------- Spotify: qué suena ---------- */
+
+// Spotify manda varias resoluciones, de mayor a menor. La mediana basta
+// para el tamaño en que la pintamos y pesa mucho menos que la grande.
+function portadaDe(item){
+  const im = (item.album && item.album.images) || [];
+  if(!im.length) return null;
+  return (im[1] || im[0]).url;
+}
+
 async function sonando(){
   const t = await token();
   if(!t) return { estado:"sin-sesion" };
@@ -262,6 +275,7 @@ async function sonando(){
     titulo: d.item.name,
     artistas: (d.item.artists || []).map(a => a.name),
     album: d.item.album ? d.item.album.name : "",
+    portada: portadaDe(d.item),
     duracionMs: d.item.duration_ms,
     progresoMs: d.progress_ms || 0,
     sonando: !!d.is_playing
@@ -428,6 +442,7 @@ async function tic(){
 
   if(d.estado !== "ok"){
     $("#tema").textContent = "—"; $("#artista").textContent = "";
+    $("#portada").hidden = true;
     S.versos = []; S.id = null;
     aviso("Sin reproducción", d.estado === "error"
       ? "No pude hablar con Spotify" : "Pon algo en Spotify");
@@ -446,6 +461,9 @@ async function tic(){
   S.versos = []; S.indice = -1;
   $("#tema").textContent = d.titulo;
   $("#artista").textContent = d.artistas.join(", ");
+  const img = $("#portada");
+  if(d.portada){ img.src = d.portada; img.hidden = false; }
+  else { img.removeAttribute("src"); img.hidden = true; }
   aviso("Buscando letra", d.titulo);
   $("#fuente").textContent = "";
 
@@ -505,6 +523,7 @@ $("#guardar").onclick = () => {
   }
   guardar(LS.cid, v); entrar();
 };
+$("#portada").onerror = () => { $("#portada").hidden = true; };
 $("#entrar").onclick = entrar;
 $("#reconfig").onclick = mostrarSetup;
 $("#pantallaCompleta").onclick = () => {
