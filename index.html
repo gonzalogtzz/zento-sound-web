@@ -84,6 +84,9 @@
   .pie .rotulo{font-size:10px}
   .pie button{background:none;border:0;color:var(--faint);font-family:var(--mono);
     font-size:10px;text-transform:uppercase;letter-spacing:.12em;padding:6px 0}
+  .firma{font-size:10px;color:rgba(243,241,235,.3)}
+  .firma::after{content:"";display:inline-block;width:4px;height:4px;
+    border-radius:50%;background:var(--blue);margin-left:6px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -148,6 +151,7 @@
     <div class="barra"><i id="progreso"></i></div>
     <div class="fila">
       <span class="rotulo" id="fuente"></span>
+      <span class="rotulo firma">La Zento Gang</span>
       <button id="pantallaCompleta">Pantalla completa</button>
     </div>
   </footer>
